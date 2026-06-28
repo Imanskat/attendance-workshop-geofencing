@@ -1,0 +1,8 @@
+name = "attendance-workshop"
+pages_build_output_dir = "web/public"
+compatibility_date = "2024-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "attendance-workshop-db"
+database_id = "b85e759f-de05-4c26-bbf3-2bd5ffe9131d"

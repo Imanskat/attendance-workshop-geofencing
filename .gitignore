@@ -5,3 +5,5 @@ token.json
 .tmp/
 node_modules/
 .claude/
+.wrangler/
+node_modules/

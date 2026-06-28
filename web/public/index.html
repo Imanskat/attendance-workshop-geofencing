@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>حضور و غیاب کارگاه</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Tahoma, "Vazirmatn", sans-serif;
+      background: #f3f4f6;
+      margin: 0;
+      padding: 16px;
+      direction: rtl;
+    }
+    .app { max-width: 420px; margin: 0 auto; }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    .hidden { display: none; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    h2 { font-size: 15px; margin: 0 0 8px; color: #444; }
+    .muted { color: #6b7280; font-size: 13px; margin: 0 0 12px; }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-bottom: 8px;
+    }
+    .btn.primary { background: #1a73e8; color: #fff; }
+    .btn.success { background: #16a34a; color: #fff; }
+    .btn.danger { background: #dc2626; color: #fff; }
+    .btn.link { background: transparent; color: #1a73e8; width: auto; padding: 6px; }
+    .btn.small { font-size: 13px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .error { color: #dc2626; font-size: 13px; min-height: 18px; }
+    .message { font-size: 13px; min-height: 18px; text-align: center; }
+    .message.success-text { color: #16a34a; }
+    .message.error-text { color: #dc2626; }
+    .geo-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f9fafb;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; flex-shrink: 0; }
+    .dot.ok { background: #16a34a; }
+    .dot.bad { background: #dc2626; }
+    .last-record {
+      border-top: 1px solid #e5e7eb;
+      margin-top: 14px;
+      padding-top: 14px;
+    }
+    .record-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+  </style>
+</head>
+<body>
+  <div class="app">
+
+    <!-- صفحه ورود -->
+    <section id="loginScreen" class="card">
+      <h1>ورود کارمند</h1>
+      <p class="muted">کد پرسنلی و پین خود را وارد کنید.</p>
+      <input id="employeeCode" type="text" placeholder="کد پرسنلی" inputmode="numeric" />
+      <input id="employeePin" type="password" placeholder="کد پین" inputmode="numeric" />
+      <button id="loginBtn" class="btn primary">ورود</button>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <!-- صفحه اصلی حضور و غیاب -->
+    <section id="mainScreen" class="card hidden">
+      <div class="header-row">
+        <div>
+          <h1 id="employeeName">-</h1>
+          <p class="muted" id="workshopName">-</p>
+        </div>
+        <button id="logoutBtn" class="btn link">خروج از حساب</button>
+      </div>
+
+      <div id="geoStatus" class="geo-status">
+        <span class="dot"></span>
+        <span id="geoStatusText">در حال دریافت موقعیت...</span>
+      </div>
+
+      <div class="actions">
+        <button id="checkInBtn" class="btn success">ثبت ورود</button>
+        <button id="checkOutBtn" class="btn danger">ثبت خروج</button>
+      </div>
+
+      <p id="actionMessage" class="message"></p>
+
+      <div class="last-record">
+        <h2>آخرین رکورد</h2>
+        <div id="lastRecordBox" class="muted">رکوردی ثبت نشده است.</div>
+      </div>
+
+      <button id="refreshHistoryBtn" class="btn link small">بروزرسانی</button>
+    </section>
+
+  </div>
+
+  <script>
+  (function () {
+    const BASE_URL = '/api';
+    const STORAGE_KEY = 'workshop_attendance_employee';
+
+    let employee = null;
+    let currentPosition = null;
+
+    const el = id => document.getElementById(id);
+
+    function apiGet(action, params) {
+      const qs = new URLSearchParams(Object.assign({ action }, params || {}));
+      return fetch(BASE_URL + '?' + qs.toString()).then(r => r.json());
+    }
+
+    function apiPost(action, body) {
+      return fetch(BASE_URL + '?action=' + action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      }).then(r => r.json());
+    }
+
+    // --- ورود ---
+    el('loginBtn').addEventListener('click', () => {
+      const code = el('employeeCode').value.trim();
+      const pin = el('employeePin').value.trim();
+      el('loginError').textContent = '';
+
+      if (!code || !pin) {
+        el('loginError').textContent = 'کد پرسنلی و پین را وارد کنید.';
+        return;
+      }
+
+      apiPost('login', { employee_code: code, pin: pin }).then(res => {
+        if (!res.ok) {
+          el('loginError').textContent = res.error || 'خطای ورود.';
+          return;
+        }
+        employee = res.data;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(employee));
+        showMainScreen();
+      }).catch(() => {
+        el('loginError').textContent = 'خطا در ارتباط با سرور.';
+      });
+    });
+
+    el('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem(STORAGE_KEY);
+      employee = null;
+      el('mainScreen').classList.add('hidden');
+      el('loginScreen').classList.remove('hidden');
+    });
+
+    function showMainScreen() {
+      el('loginScreen').classList.add('hidden');
+      el('mainScreen').classList.remove('hidden');
+      el('employeeName').textContent = employee.full_name;
+      el('workshopName').textContent = employee.workshop ? employee.workshop.name : 'بدون کارگاه تخصیص‌یافته';
+      startWatchingLocation();
+      loadLastRecord();
+    }
+
+    // --- موقعیت جغرافیایی ---
+    function startWatchingLocation() {
+      if (!navigator.geolocation) {
+        setGeoStatus('bad', 'مرورگر شما از موقعیت‌یابی پشتیبانی نمی‌کند.');
+        return;
+      }
+      setGeoStatus('', 'در حال دریافت موقعیت...');
+      navigator.geolocation.watchPosition(
+        pos => {
+          currentPosition = pos;
+          const acc = Math.round(pos.coords.accuracy);
+          const distanceInfo = employee.workshop ? distanceToWorkshop(pos) : null;
+
+          if (acc > 100) {
+            setGeoStatus('bad', 'دقت موقعیت ضعیف است (' + acc + ' متر)');
+          } else if (distanceInfo !== null) {
+            const within = distanceInfo <= (employee.workshop.radius || 0);
+            setGeoStatus(within ? 'ok' : 'bad',
+              (within ? 'داخل محدوده کارگاه' : 'خارج از محدوده کارگاه') + ' (' + Math.round(distanceInfo) + ' متر، دقت ' + acc + ' متر)');
+          } else {
+            setGeoStatus('ok', 'موقعیت دریافت شد (دقت ' + acc + ' متر)');
+          }
+        },
+        err => {
+          setGeoStatus('bad', 'خطا در دریافت موقعیت: ' + err.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+      );
+    }
+
+    function distanceToWorkshop(pos) {
+      const R = 6371000;
+      const toRad = d => d * Math.PI / 180;
+      const lat1 = pos.coords.latitude, lng1 = pos.coords.longitude;
+      const lat2 = Number(employee.workshop.lat), lng2 = Number(employee.workshop.lng);
+      const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function setGeoStatus(type, text) {
+      const dot = document.querySelector('#geoStatus .dot');
+      dot.className = 'dot' + (type ? ' ' + type : '');
+      el('geoStatusText').textContent = text;
+    }
+
+    // --- ثبت ورود / خروج ---
+    el('checkInBtn').addEventListener('click', () => submitAttendance('check-in'));
+    el('checkOutBtn').addEventListener('click', () => submitAttendance('check-out'));
+
+    function submitAttendance(type) {
+      if (!currentPosition) {
+        showActionMessage('error-text', 'هنوز موقعیت جغرافیایی دریافت نشده است.');
+        return;
+      }
+
+      setButtonsDisabled(true);
+      showActionMessage('', 'در حال ثبت...');
+
+      apiPost(type, {
+        employee_id: employee.id,
+        lat: currentPosition.coords.latitude,
+        lng: currentPosition.coords.longitude,
+        accuracy: currentPosition.coords.accuracy,
+        device_info: navigator.userAgent
+      }).then(res => {
+        setButtonsDisabled(false);
+        if (!res.ok) {
+          showActionMessage('error-text', res.error || 'خطا در ثبت.');
+          return;
+        }
+        showActionMessage('success-text', res.data.message);
+        loadLastRecord();
+      }).catch(() => {
+        setButtonsDisabled(false);
+        showActionMessage('error-text', 'خطا در ارتباط با سرور.');
+      });
+    }
+
+    function setButtonsDisabled(disabled) {
+      el('checkInBtn').disabled = disabled;
+      el('checkOutBtn').disabled = disabled;
+    }
+
+    function showActionMessage(cls, text) {
+      const node = el('actionMessage');
+      node.className = 'message' + (cls ? ' ' + cls : '');
+      node.textContent = text;
+    }
+
+    // --- آخرین رکورد ---
+    el('refreshHistoryBtn').addEventListener('click', loadLastRecord);
+
+    function loadLastRecord() {
+      apiGet('last-status', { employeeId: employee.id }).then(res => {
+        const box = el('lastRecordBox');
+        if (!res.ok || !res.data || res.data.status === 'no-record') {
+          box.textContent = 'رکوردی ثبت نشده است.';
+          return;
+        }
+        const r = res.data.last_record;
+        const typeLabel = r.type === 'check-in' ? 'ورود' : 'خروج';
+        const date = new Date(r.timestamp);
+        box.innerHTML =
+          '<div class="record-row"><span>نوع</span><span>' + typeLabel + '</span></div>' +
+          '<div class="record-row"><span>زمان</span><span>' + date.toLocaleString('fa-IR') + '</span></div>' +
+          '<div class="record-row"><span>فاصله از کارگاه</span><span>' + (r.distance_m !== '' && r.distance_m !== null ? r.distance_m + ' متر' : '-') + '</span></div>';
+      });
+    }
+
+    // --- بازیابی نشست قبلی ---
+    (function init() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        employee = JSON.parse(saved);
+        showMainScreen();
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

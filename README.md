@@ -1,5 +1,45 @@
 # سیستم حضور و غیاب کارگاه (Geofencing)
 
+## نسخه فعال: Cloudflare Pages + D1
+
+🔗 **لینک سیستم**: https://attendance-workshop.pages.dev/
+🔗 **پنل مدیر**: https://attendance-workshop.pages.dev/admin.html (یوزرنیم/پسورد ادمین جداگانه و خارج از این مخزن عمومی در اختیار شما قرار گرفته است)
+
+لینک‌های کوتاه‌تر روی GitHub Pages هم در دسترس‌اند (فقط ریدایرکت به آدرس بالا):
+🔗 https://imanskat.github.io/attendance-workshop-geofencing/
+🔗 https://imanskat.github.io/attendance-workshop-geofencing/admin.html
+
+**چرا از Google Apps Script به Cloudflare منتقل شد؟** نسخه اول روی Google Apps Script ساخته شده بود، اما `script.google.com` در ایران بدون VPN در دسترس نیست — یعنی کارمندان عملاً نمی‌توانستند check-in/check-out بزنند. به همین دلیل بک‌اند به Cloudflare Pages + Pages Functions + D1 (دیتابیس SQLite در edge) منتقل شد که معمولاً بدون فیلترشکن از ایران در دسترس است.
+
+### ساختار پروژه جدید (پوشه `web/`)
+
+| فایل | نقش |
+|---|---|
+| `web/functions/api.js` | بک‌اند: همه‌ی منطق (ورود، check-in/check-out، Geofence، ضدتقلب GPS، پنل مدیر) |
+| `web/public/index.html` | صفحه کارمند (PWA ورود + ثبت حضور) |
+| `web/public/admin.html` | پنل مدیر |
+| `web/schema.sql` | ساخت جدول‌های D1 + داده نمونه |
+| `wrangler.toml` | تنظیمات پروژه Cloudflare Pages + binding دیتابیس D1 |
+
+### توسعه/دیپلوی مجدد
+
+```bash
+npx wrangler login
+npx wrangler d1 execute attendance-workshop-db --remote --file=web/schema.sql   # فقط در صورت تغییر schema
+npx wrangler pages deploy web/public --project-name=attendance-workshop
+```
+
+برای ست‌کردن/تغییر secret توکن ادمین:
+```bash
+npx wrangler pages secret put ADMIN_TOKEN_SECRET --project-name=attendance-workshop
+```
+
+---
+
+## نسخه قدیمی (مرجع): Google Apps Script + Google Sheets
+
+> ⚠️ این نسخه دیگر بک‌اند فعال سیستم نیست (به دلیل فیلترینگ `script.google.com` در ایران) و فقط برای مرجع/سناریوهای دیگر (مثلاً استفاده خارج از ایران بدون نیاز به هزینه هاست) نگه داشته شده. کد آن در `src/` باقی است.
+
 بک‌اند و دیتابیس کاملاً روی Google Apps Script + Google Sheets ساخته شده — بدون سرور و بدون هزینه میزبانی.
 
 ## Google Sheet آماده‌شده
@@ -53,7 +93,7 @@ clasp deploy
 **Workshops**: `id, name, lat, lng, radius`
 **Employees**: `id, full_name, employee_code, pin, assigned_workshop_id`
 **AttendanceRecords**: `id, employee_id, type, timestamp, lat, lng, accuracy, device_info, distance_m, status`
-**Admins**: `id, username, password_hash, created_at` — با اجرای `initializeSheets`، اگر این شیت خالی باشد یک حساب پیش‌فرض (`admin` / `admin123`) ساخته می‌شود. **حتماً پسورد پیش‌فرض را بعد از اولین ورود تغییر دهید** (یک سطر در شیت `Admins` ویرایش کنید و مقدار `password_hash` را با خروجی `hashPassword_('پسورد-جدید')` جای‌گزین کنید).
+**Admins**: `id, username, password_hash, created_at` — با اجرای `initializeSheets`، اگر این شیت خالی باشد یک حساب پیش‌فرض ساخته می‌شود (مقدار پسورد در `Code.gs` تابع `ensureDefaultAdmin_` قابل تغییر است). **حتماً پسورد پیش‌فرض را بعد از اولین ورود تغییر دهید** (یک سطر در شیت `Admins` ویرایش کنید و مقدار `password_hash` را با خروجی `hashPassword_('پسورد-جدید')` جای‌گزین کنید).
 
 برای افزودن کارگاه یا کارمند جدید، فقط یک سطر به شیت مربوطه اضافه کنید — نیازی به تغییر کد نیست.
 
