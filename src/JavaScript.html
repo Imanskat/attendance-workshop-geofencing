@@ -1,0 +1,183 @@
+<script>
+(function () {
+  const BASE_URL = window.location.href.split('?')[0];
+  const STORAGE_KEY = 'workshop_attendance_employee';
+
+  let employee = null;
+  let currentPosition = null;
+
+  const el = id => document.getElementById(id);
+
+  function apiGet(action, params) {
+    const qs = new URLSearchParams(Object.assign({ action }, params || {}));
+    return fetch(BASE_URL + '?' + qs.toString()).then(r => r.json());
+  }
+
+  function apiPost(action, body) {
+    return fetch(BASE_URL + '?action=' + action, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body)
+    }).then(r => r.json());
+  }
+
+  // --- ورود ---
+  el('loginBtn').addEventListener('click', () => {
+    const code = el('employeeCode').value.trim();
+    const pin = el('employeePin').value.trim();
+    el('loginError').textContent = '';
+
+    if (!code || !pin) {
+      el('loginError').textContent = 'کد پرسنلی و پین را وارد کنید.';
+      return;
+    }
+
+    apiPost('login', { employee_code: code, pin: pin }).then(res => {
+      if (!res.ok) {
+        el('loginError').textContent = res.error || 'خطای ورود.';
+        return;
+      }
+      employee = res.data;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(employee));
+      showMainScreen();
+    }).catch(() => {
+      el('loginError').textContent = 'خطا در ارتباط با سرور.';
+    });
+  });
+
+  el('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEY);
+    employee = null;
+    el('mainScreen').classList.add('hidden');
+    el('loginScreen').classList.remove('hidden');
+  });
+
+  function showMainScreen() {
+    el('loginScreen').classList.add('hidden');
+    el('mainScreen').classList.remove('hidden');
+    el('employeeName').textContent = employee.full_name;
+    el('workshopName').textContent = employee.workshop ? employee.workshop.name : 'بدون کارگاه تخصیص‌یافته';
+    startWatchingLocation();
+    loadLastRecord();
+  }
+
+  // --- موقعیت جغرافیایی ---
+  function startWatchingLocation() {
+    if (!navigator.geolocation) {
+      setGeoStatus('bad', 'مرورگر شما از موقعیت‌یابی پشتیبانی نمی‌کند.');
+      return;
+    }
+    setGeoStatus('', 'در حال دریافت موقعیت...');
+    navigator.geolocation.watchPosition(
+      pos => {
+        currentPosition = pos;
+        const acc = Math.round(pos.coords.accuracy);
+        const distanceInfo = employee.workshop ? distanceToWorkshop(pos) : null;
+
+        if (acc > 100) {
+          setGeoStatus('bad', 'دقت موقعیت ضعیف است (' + acc + ' متر)');
+        } else if (distanceInfo !== null) {
+          const within = distanceInfo <= (employee.workshop.radius || 0);
+          setGeoStatus(within ? 'ok' : 'bad',
+            (within ? 'داخل محدوده کارگاه' : 'خارج از محدوده کارگاه') + ' (' + Math.round(distanceInfo) + ' متر، دقت ' + acc + ' متر)');
+        } else {
+          setGeoStatus('ok', 'موقعیت دریافت شد (دقت ' + acc + ' متر)');
+        }
+      },
+      err => {
+        setGeoStatus('bad', 'خطا در دریافت موقعیت: ' + err.message);
+      },
+      { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+    );
+  }
+
+  function distanceToWorkshop(pos) {
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const lat1 = pos.coords.latitude, lng1 = pos.coords.longitude;
+    const lat2 = Number(employee.workshop.lat), lng2 = Number(employee.workshop.lng);
+    const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  function setGeoStatus(type, text) {
+    const dot = document.querySelector('#geoStatus .dot');
+    dot.className = 'dot' + (type ? ' ' + type : '');
+    el('geoStatusText').textContent = text;
+  }
+
+  // --- ثبت ورود / خروج ---
+  el('checkInBtn').addEventListener('click', () => submitAttendance('check-in'));
+  el('checkOutBtn').addEventListener('click', () => submitAttendance('check-out'));
+
+  function submitAttendance(type) {
+    if (!currentPosition) {
+      showActionMessage('error-text', 'هنوز موقعیت جغرافیایی دریافت نشده است.');
+      return;
+    }
+
+    setButtonsDisabled(true);
+    showActionMessage('', 'در حال ثبت...');
+
+    apiPost(type, {
+      employee_id: employee.id,
+      lat: currentPosition.coords.latitude,
+      lng: currentPosition.coords.longitude,
+      accuracy: currentPosition.coords.accuracy,
+      device_info: navigator.userAgent
+    }).then(res => {
+      setButtonsDisabled(false);
+      if (!res.ok) {
+        showActionMessage('error-text', res.error || 'خطا در ثبت.');
+        return;
+      }
+      showActionMessage('success-text', res.data.message);
+      loadLastRecord();
+    }).catch(() => {
+      setButtonsDisabled(false);
+      showActionMessage('error-text', 'خطا در ارتباط با سرور.');
+    });
+  }
+
+  function setButtonsDisabled(disabled) {
+    el('checkInBtn').disabled = disabled;
+    el('checkOutBtn').disabled = disabled;
+  }
+
+  function showActionMessage(cls, text) {
+    const node = el('actionMessage');
+    node.className = 'message' + (cls ? ' ' + cls : '');
+    node.textContent = text;
+  }
+
+  // --- آخرین رکورد ---
+  el('refreshHistoryBtn').addEventListener('click', loadLastRecord);
+
+  function loadLastRecord() {
+    apiGet('last-status', { employeeId: employee.id }).then(res => {
+      const box = el('lastRecordBox');
+      if (!res.ok || !res.data || res.data.status === 'no-record') {
+        box.textContent = 'رکوردی ثبت نشده است.';
+        return;
+      }
+      const r = res.data.last_record;
+      const typeLabel = r.type === 'check-in' ? 'ورود' : 'خروج';
+      const date = new Date(r.timestamp);
+      box.innerHTML =
+        '<div class="record-row"><span>نوع</span><span>' + typeLabel + '</span></div>' +
+        '<div class="record-row"><span>زمان</span><span>' + date.toLocaleString('fa-IR') + '</span></div>' +
+        '<div class="record-row"><span>فاصله از کارگاه</span><span>' + (r.distance_m !== '' ? r.distance_m + ' متر' : '-') + '</span></div>';
+    });
+  }
+
+  // --- بازیابی نشست قبلی ---
+  (function init() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      employee = JSON.parse(saved);
+      showMainScreen();
+    }
+  })();
+})();
+</script>

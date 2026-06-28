@@ -1,0 +1,7 @@
+.clasp.json
+.env
+credentials.json
+token.json
+.tmp/
+node_modules/
+.claude/

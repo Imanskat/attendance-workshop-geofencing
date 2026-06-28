@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>حضور و غیاب کارگاه</title>
+  <link rel="manifest" href="?action=manifest">
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+  <div class="app">
+
+    <!-- صفحه ورود -->
+    <section id="loginScreen" class="card">
+      <h1>ورود کارمند</h1>
+      <p class="muted">کد پرسنلی و پین خود را وارد کنید.</p>
+      <input id="employeeCode" type="text" placeholder="کد پرسنلی" inputmode="numeric" />
+      <input id="employeePin" type="password" placeholder="کد پین" inputmode="numeric" />
+      <button id="loginBtn" class="btn primary">ورود</button>
+      <p id="loginError" class="error"></p>
+    </section>
+
+    <!-- صفحه اصلی حضور و غیاب -->
+    <section id="mainScreen" class="card hidden">
+      <div class="header-row">
+        <div>
+          <h1 id="employeeName">-</h1>
+          <p class="muted" id="workshopName">-</p>
+        </div>
+        <button id="logoutBtn" class="btn link">خروج از حساب</button>
+      </div>
+
+      <div id="geoStatus" class="geo-status">
+        <span class="dot"></span>
+        <span id="geoStatusText">در حال دریافت موقعیت...</span>
+      </div>
+
+      <div class="actions">
+        <button id="checkInBtn" class="btn success">ثبت ورود</button>
+        <button id="checkOutBtn" class="btn danger">ثبت خروج</button>
+      </div>
+
+      <p id="actionMessage" class="message"></p>
+
+      <div class="last-record">
+        <h2>آخرین رکورد</h2>
+        <div id="lastRecordBox" class="muted">رکوردی ثبت نشده است.</div>
+      </div>
+
+      <button id="refreshHistoryBtn" class="btn link small">بروزرسانی</button>
+    </section>
+
+  </div>
+
+  <?!= include('JavaScript'); ?>
+</body>
+</html>
