@@ -5,59 +5,159 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>داشبورد مدیریت</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    body { font-family: Tahoma, sans-serif; direction: rtl; background: #f3f4f6; margin: 0; padding: 20px; }
-    h1 { font-size: 20px; }
-    .toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
-    input[type=date] { padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; }
-    button { padding: 8px 14px; border: none; border-radius: 6px; background: #1a73e8; color: #fff; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
-    th, td { padding: 10px; text-align: right; border-bottom: 1px solid #e5e7eb; font-size: 13px; }
-    th { background: #f9fafb; }
-    .status-absent { color: #dc2626; }
-    .status-working { color: #d97706; }
-    .status-done { color: #16a34a; }
-    .login-box { max-width: 320px; margin: 60px auto; background: #fff; border-radius: 10px; padding: 24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
-    .login-box input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #d1d5db; border-radius: 6px; box-sizing: border-box; }
-    .login-box button { width: 100%; padding: 10px; }
-    .login-error { color: #dc2626; font-size: 13px; min-height: 18px; }
-    .hidden { display: none; }
-    .logout-link { background: none; color: #6b7280; font-size: 13px; cursor: pointer; border: none; }
+    body { padding: 24px 16px; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; max-width: 1080px; margin: 0 auto 18px; }
+    .topbar .brand { display: flex; align-items: center; gap: 10px; }
+    .topbar .logo {
+      width: 34px; height: 34px; border-radius: 9px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(79,70,229,.3);
+    }
+    .topbar h1 { font-size: 17px; margin: 0; }
+
+    .login-box { max-width: 380px; margin: 64px auto 0; }
+    .login-box .brand-center { display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom: 20px; }
+    .login-box h1 { font-size: 20px; margin: 0 0 4px; text-align: center; }
+    .login-box .muted { text-align: center; }
+
+    .dashboard { max-width: 1080px; margin: 0 auto; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+    .stat-card {
+      background: #fff; border-radius: 14px; padding: 16px 18px;
+      box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px;
+    }
+    .stat-card .icon { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .stat-card .num { font-size: 20px; font-weight: 700; line-height: 1.2; }
+    .stat-card .label { font-size: 12px; color: var(--muted); }
+    .stat-card.total .icon { background: var(--primary-light); color: var(--primary); }
+    .stat-card.working .icon { background: var(--warning-light); color: var(--warning); }
+    .stat-card.done .icon { background: var(--success-light); color: var(--success); }
+    .stat-card.absent .icon { background: var(--danger-light); color: var(--danger); }
+
+    .toolbar {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      background: #fff; border-radius: 14px; padding: 14px 16px; margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar label { font-size: 13px; color: var(--muted); }
+    .toolbar input[type=date] {
+      padding: 10px 12px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-family: inherit; font-size: 14px; background: #fafafa;
+    }
+    .toolbar .spacer { flex: 1; }
+    .toolbar .btn { width: auto; padding: 10px 16px; }
+
+    .table-card { background: #fff; border-radius: 14px; padding: 6px; box-shadow: var(--shadow); }
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 13.5px; }
+
+    @media (max-width: 640px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .topbar h1 { font-size: 14px; }
+      .toolbar .spacer { display: none; }
+      .toolbar { justify-content: stretch; }
+      .toolbar #loadBtn, .toolbar #exportBtn { flex: 1; }
+    }
   </style>
 </head>
 <body>
-  <div id="loginView" class="login-box">
+
+  <div id="loginView" class="login-box card fade-in">
+    <div class="brand-center">
+      <span class="logo">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+      </span>
+    </div>
     <h1>ورود مدیر</h1>
-    <input type="text" id="usernameInput" placeholder="یوزرنیم" autocomplete="username">
-    <input type="password" id="passwordInput" placeholder="پسورد" autocomplete="current-password">
-    <button id="loginBtn">ورود</button>
-    <div class="login-error" id="loginError"></div>
+    <p class="muted">برای مشاهده داشبورد وارد شوید.</p>
+
+    <div class="field">
+      <label for="usernameInput">یوزرنیم</label>
+      <div class="input-wrap">
+        <input type="text" id="usernameInput" placeholder="یوزرنیم" autocomplete="username">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      </div>
+    </div>
+    <div class="field">
+      <label for="passwordInput">پسورد</label>
+      <div class="input-wrap">
+        <input type="password" id="passwordInput" placeholder="••••••" autocomplete="current-password">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </div>
+    </div>
+
+    <button id="loginBtn" class="btn primary">ورود</button>
+    <div class="error-text" id="loginError"></div>
   </div>
 
   <div id="dashboardView" class="hidden">
-    <div class="toolbar">
-      <h1 style="flex:1">داشبورد مدیریت حضور و غیاب</h1>
-      <button class="logout-link" id="logoutBtn">خروج</button>
+    <div class="topbar">
+      <div class="brand">
+        <span class="logo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+        </span>
+        <h1>داشبورد مدیریت حضور و غیاب</h1>
+      </div>
+      <button class="btn ghost small" id="logoutBtn">خروج</button>
     </div>
-    <div class="toolbar">
-      <input type="date" id="dateInput">
-      <button id="loadBtn">نمایش گزارش</button>
-      <button id="exportBtn">خروجی CSV</button>
+
+    <div class="dashboard fade-in">
+      <div class="stats-grid">
+        <div class="stat-card total">
+          <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>
+          <div><div class="num" id="statTotal">0</div><div class="label">کل کارمندان</div></div>
+        </div>
+        <div class="stat-card working">
+          <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span>
+          <div><div class="num" id="statWorking">0</div><div class="label">در حال کار</div></div>
+        </div>
+        <div class="stat-card done">
+          <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>
+          <div><div class="num" id="statDone">0</div><div class="label">تکمیل‌شده</div></div>
+        </div>
+        <div class="stat-card absent">
+          <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg></span>
+          <div><div class="num" id="statAbsent">0</div><div class="label">غایب</div></div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label for="dateInput">تاریخ گزارش</label>
+        <input type="date" id="dateInput">
+        <button id="loadBtn" class="btn primary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          نمایش گزارش
+        </button>
+        <span class="spacer"></span>
+        <button id="exportBtn" class="btn outline">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          خروجی CSV
+        </button>
+      </div>
+
+      <div class="table-card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>کد پرسنلی</th>
+                <th>نام</th>
+                <th>کارگاه</th>
+                <th>ورود</th>
+                <th>خروج</th>
+                <th>ساعت کاری</th>
+                <th>وضعیت</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th>کد پرسنلی</th>
-          <th>نام</th>
-          <th>کارگاه</th>
-          <th>ورود</th>
-          <th>خروج</th>
-          <th>ساعت کاری</th>
-          <th>وضعیت</th>
-        </tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
   </div>
 
   <script>
@@ -94,30 +194,58 @@
     function login() {
       const username = document.getElementById('usernameInput').value;
       const password = document.getElementById('passwordInput').value;
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'در حال ورود...';
       fetch(BASE_URL + '?action=admin-login', {
         method: 'POST',
         body: JSON.stringify({ username: username, password: password })
       })
         .then(r => r.json())
         .then(res => {
+          btn.disabled = false;
+          btn.textContent = 'ورود';
           if (res.ok) {
             sessionStorage.setItem('adminToken', res.data.token);
             showDashboard();
           } else {
             document.getElementById('loginError').textContent = res.error;
           }
+        })
+        .catch(() => {
+          btn.disabled = false;
+          btn.textContent = 'ورود';
+          document.getElementById('loginError').textContent = 'خطا در ارتباط با سرور.';
         });
+    }
+
+    function updateStats(rows) {
+      const total = rows.length;
+      const working = rows.filter(r => r.status === 'در حال کار').length;
+      const done = rows.filter(r => r.status === 'تکمیل شده').length;
+      const absent = rows.filter(r => r.status === 'غایب').length;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statWorking').textContent = working;
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statAbsent').textContent = absent;
     }
 
     function loadReport() {
       const date = dateInput.value;
+      const body = document.getElementById('tableBody');
+      body.innerHTML = '<tr><td colspan="7" class="empty-state">در حال بارگذاری...</td></tr>';
       fetch(BASE_URL + '?action=admin-summary&date=' + date + '&token=' + encodeURIComponent(getToken()))
         .then(r => r.json())
         .then(res => {
           if (!res.ok) { showLogin(res.error); return; }
-          const body = document.getElementById('tableBody');
+          const rows = res.data || [];
+          updateStats(rows);
           body.innerHTML = '';
-          (res.data || []).forEach(row => {
+          if (!rows.length) {
+            body.innerHTML = '<tr><td colspan="7" class="empty-state">داده‌ای برای این تاریخ یافت نشد.</td></tr>';
+            return;
+          }
+          rows.forEach(row => {
             const tr = document.createElement('tr');
             tr.innerHTML =
               '<td>' + row.employee_code + '</td>' +
@@ -126,13 +254,17 @@
               '<td>' + (row.check_in_time ? new Date(row.check_in_time).toLocaleTimeString('fa-IR') : '-') + '</td>' +
               '<td>' + (row.check_out_time ? new Date(row.check_out_time).toLocaleTimeString('fa-IR') : '-') + '</td>' +
               '<td>' + (row.worked_hours || '-') + '</td>' +
-              '<td class="' + statusClass(row.status) + '">' + row.status + '</td>';
+              '<td><span class="badge ' + statusClass(row.status) + '">' + row.status + '</span></td>';
             body.appendChild(tr);
           });
+        })
+        .catch(() => {
+          body.innerHTML = '<tr><td colspan="7" class="empty-state">خطا در ارتباط با سرور.</td></tr>';
         });
     }
 
     document.getElementById('loginBtn').addEventListener('click', login);
+    document.getElementById('passwordInput').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
     document.getElementById('loadBtn').addEventListener('click', loadReport);
     document.getElementById('exportBtn').addEventListener('click', () => {
       window.open(BASE_URL + '?action=admin-export-csv&date=' + dateInput.value + '&token=' + encodeURIComponent(getToken()), '_blank');

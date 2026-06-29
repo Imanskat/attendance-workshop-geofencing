@@ -5,119 +5,133 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <title>حضور و غیاب کارگاه</title>
+  <link rel="stylesheet" href="style.css">
   <style>
-    * { box-sizing: border-box; }
-    body {
-      font-family: Tahoma, "Vazirmatn", sans-serif;
-      background: #f3f4f6;
-      margin: 0;
-      padding: 16px;
-      direction: rtl;
+    body { padding: 20px 16px; }
+    .app { max-width: 420px; margin: 32px auto 0; }
+
+    .brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 22px; }
+    .brand .logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: linear-gradient(135deg, #4f46e5, #6366f1);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 6px 16px rgba(79,70,229,.3);
     }
-    .app { max-width: 420px; margin: 0 auto; }
-    .card {
-      background: #fff;
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    .brand .title { font-weight: 700; font-size: 16px; }
+
+    #loginScreen h1 { font-size: 21px; margin: 0 0 4px; text-align: center; }
+    #loginScreen .muted { text-align: center; }
+
+    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
+    .header-row h1 { font-size: 19px; margin: 0 0 4px; }
+    .header-row .workshop-name { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+    .avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--primary-light); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 16px; flex-shrink: 0;
     }
-    .hidden { display: none; }
-    h1 { font-size: 20px; margin: 0 0 6px; }
-    h2 { font-size: 15px; margin: 0 0 8px; color: #444; }
-    .muted { color: #6b7280; font-size: 13px; margin: 0 0 12px; }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 8px;
-      font-size: 15px;
-    }
-    .btn {
-      display: inline-block;
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      font-size: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      margin-bottom: 8px;
-    }
-    .btn.primary { background: #1a73e8; color: #fff; }
-    .btn.success { background: #16a34a; color: #fff; }
-    .btn.danger { background: #dc2626; color: #fff; }
-    .btn.link { background: transparent; color: #1a73e8; width: auto; padding: 6px; }
-    .btn.small { font-size: 13px; }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
-    .header-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .error { color: #dc2626; font-size: 13px; min-height: 18px; }
-    .message { font-size: 13px; min-height: 18px; text-align: center; }
-    .message.success-text { color: #16a34a; }
-    .message.error-text { color: #dc2626; }
-    .geo-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #f9fafb;
-      border-radius: 8px;
-      padding: 10px 12px;
-      font-size: 13px;
-      margin-bottom: 8px;
-    }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #9ca3af; flex-shrink: 0; }
-    .dot.ok { background: #16a34a; }
-    .dot.bad { background: #dc2626; }
-    .last-record {
-      border-top: 1px solid #e5e7eb;
-      margin-top: 14px;
-      padding-top: 14px;
-    }
-    .record-row { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .ident { display: flex; gap: 12px; align-items: center; }
+
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0 6px; }
+
+    .last-record { border-top: 1px solid var(--border); margin-top: 18px; padding-top: 16px; }
+    .last-record h2 { font-size: 14px; margin: 0 0 10px; color: var(--muted); display: flex; align-items: center; gap: 6px; font-weight: 600; }
+    .record-box { background: #f9fafb; border-radius: 12px; padding: 4px 14px; }
+    .record-row { display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; padding: 9px 0; border-bottom: 1px dashed var(--border); }
+    .record-row:last-child { border-bottom: none; }
+    .record-row span:first-child { color: var(--muted); }
+    .record-row span:last-child { font-weight: 600; }
+    .empty-record { color: var(--muted); font-size: 13.5px; text-align: center; padding: 14px 0; }
+
+    .refresh-row { display: flex; justify-content: center; margin-top: 10px; }
   </style>
 </head>
 <body>
   <div class="app">
 
+    <div class="brand">
+      <span class="logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+      </span>
+      <span class="title">حضور و غیاب کارگاه</span>
+    </div>
+
     <!-- صفحه ورود -->
-    <section id="loginScreen" class="card">
+    <section id="loginScreen" class="card fade-in">
       <h1>ورود کارمند</h1>
       <p class="muted">کد پرسنلی و پین خود را وارد کنید.</p>
-      <input id="employeeCode" type="text" placeholder="کد پرسنلی" inputmode="numeric" />
-      <input id="employeePin" type="password" placeholder="کد پین" inputmode="numeric" />
+
+      <div class="field">
+        <label for="employeeCode">کد پرسنلی</label>
+        <div class="input-wrap">
+          <input id="employeeCode" type="text" placeholder="مثلاً ۱۰۰۱" inputmode="numeric" autocomplete="username" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="employeePin">کد پین</label>
+        <div class="input-wrap">
+          <input id="employeePin" type="password" placeholder="••••" inputmode="numeric" autocomplete="current-password" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+      </div>
+
       <button id="loginBtn" class="btn primary">ورود</button>
-      <p id="loginError" class="error"></p>
+      <p id="loginError" class="error-text"></p>
     </section>
 
     <!-- صفحه اصلی حضور و غیاب -->
     <section id="mainScreen" class="card hidden">
       <div class="header-row">
-        <div>
-          <h1 id="employeeName">-</h1>
-          <p class="muted" id="workshopName">-</p>
+        <div class="ident">
+          <span class="avatar" id="employeeAvatar">-</span>
+          <div>
+            <h1 id="employeeName">-</h1>
+            <p class="workshop-name">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg>
+              <span id="workshopName">-</span>
+            </p>
+          </div>
         </div>
-        <button id="logoutBtn" class="btn link">خروج از حساب</button>
+        <button id="logoutBtn" class="btn ghost small">خروج</button>
       </div>
 
-      <div id="geoStatus" class="geo-status">
+      <div id="geoStatus" class="status-pill">
         <span class="dot"></span>
         <span id="geoStatusText">در حال دریافت موقعیت...</span>
       </div>
 
       <div class="actions">
-        <button id="checkInBtn" class="btn success">ثبت ورود</button>
-        <button id="checkOutBtn" class="btn danger">ثبت خروج</button>
+        <button id="checkInBtn" class="btn success">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+          ثبت ورود
+        </button>
+        <button id="checkOutBtn" class="btn danger">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+          ثبت خروج
+        </button>
       </div>
 
       <p id="actionMessage" class="message"></p>
 
       <div class="last-record">
-        <h2>آخرین رکورد</h2>
-        <div id="lastRecordBox" class="muted">رکوردی ثبت نشده است.</div>
+        <h2>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          آخرین رکورد
+        </h2>
+        <div id="lastRecordBox" class="record-box">
+          <div class="empty-record">رکوردی ثبت نشده است.</div>
+        </div>
       </div>
 
-      <button id="refreshHistoryBtn" class="btn link small">بروزرسانی</button>
+      <div class="refresh-row">
+        <button id="refreshHistoryBtn" class="btn ghost small">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          بروزرسانی
+        </button>
+      </div>
     </section>
 
   </div>
@@ -156,7 +170,12 @@
         return;
       }
 
+      el('loginBtn').disabled = true;
+      el('loginBtn').textContent = 'در حال ورود...';
+
       apiPost('login', { employee_code: code, pin: pin }).then(res => {
+        el('loginBtn').disabled = false;
+        el('loginBtn').textContent = 'ورود';
         if (!res.ok) {
           el('loginError').textContent = res.error || 'خطای ورود.';
           return;
@@ -165,9 +184,13 @@
         localStorage.setItem(STORAGE_KEY, JSON.stringify(employee));
         showMainScreen();
       }).catch(() => {
+        el('loginBtn').disabled = false;
+        el('loginBtn').textContent = 'ورود';
         el('loginError').textContent = 'خطا در ارتباط با سرور.';
       });
     });
+
+    el('employeePin').addEventListener('keydown', e => { if (e.key === 'Enter') el('loginBtn').click(); });
 
     el('logoutBtn').addEventListener('click', () => {
       localStorage.removeItem(STORAGE_KEY);
@@ -179,7 +202,9 @@
     function showMainScreen() {
       el('loginScreen').classList.add('hidden');
       el('mainScreen').classList.remove('hidden');
+      el('mainScreen').classList.add('fade-in');
       el('employeeName').textContent = employee.full_name;
+      el('employeeAvatar').textContent = (employee.full_name || '-').trim().charAt(0);
       el('workshopName').textContent = employee.workshop ? employee.workshop.name : 'بدون کارگاه تخصیص‌یافته';
       startWatchingLocation();
       loadLastRecord();
@@ -226,7 +251,9 @@
     }
 
     function setGeoStatus(type, text) {
-      const dot = document.querySelector('#geoStatus .dot');
+      const wrap = el('geoStatus');
+      const dot = wrap.querySelector('.dot');
+      wrap.className = 'status-pill' + (type ? ' ' + type : '');
       dot.className = 'dot' + (type ? ' ' + type : '');
       el('geoStatusText').textContent = text;
     }
@@ -282,7 +309,7 @@
       apiGet('last-status', { employeeId: employee.id }).then(res => {
         const box = el('lastRecordBox');
         if (!res.ok || !res.data || res.data.status === 'no-record') {
-          box.textContent = 'رکوردی ثبت نشده است.';
+          box.innerHTML = '<div class="empty-record">رکوردی ثبت نشده است.</div>';
           return;
         }
         const r = res.data.last_record;
